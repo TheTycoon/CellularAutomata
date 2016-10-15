@@ -1,24 +1,26 @@
-import pygame, sys
+import pygame
 from pygame.locals import *
 from random import randint
 
-import CellClass
+import cell
+import settings
 
-
-# create a new drawing surface, width=640, height=640
-window = pygame.display.set_mode((640, 640))
-pygame.display.set_caption('Cellular Automata')
-
-# Set rows, columns, and tilesize(square in pixels) for your grid
-ROWS = 40
-COLUMNS = 40
-TILESIZE = 16
+window = pygame.display.set_mode((settings.WIDTH, settings.HEIGHT))
+pygame.display.set_caption(settings.TITLE)
 
 # fill a list with cells randomly assigned on or off
-gridList = []
-for i in range(ROWS * COLUMNS):
-        gridList.append(CellClass.Cell(TILESIZE, ROWS, COLUMNS, i, randint(0, 100)))
+grid = []
+for row in range(settings.ROWS):
+    grid.append([])
+    for column in range(settings.COLUMNS):
+        grid[row].append(cell.Cell(column, row, randint(0,100)))
 
+
+# set the neighborhood around all cells except border cells
+for row in range(settings.ROWS):
+    for column in range(settings.COLUMNS):
+        if row != 0 and column != 0 and row != settings.ROWS - 1 and column != settings.COLUMNS - 1:
+            grid[column][row].set_neighborhood(grid)
 
 # MAIN LOOP
 running = True
@@ -30,22 +32,40 @@ while running:
         # Close program and exit loop if a quit event happens
         if event.type == QUIT:
             running = False
-            sys.exit()
 
         # All Key Pressed Events
         if event.type == pygame.KEYDOWN:
 
-            # Press spacebar to simulate a new generation of cell lives
+            # Press spacebar to simulate a new generation of cell lives for caves, don't generate border cells
             if event.key == pygame.K_SPACE:
-                for i in range(ROWS * COLUMNS):
-                    CellClass.generate(gridList, i, ROWS, COLUMNS)
+                for row in range(settings.ROWS):
+                    for column in range(settings.COLUMNS):
+                        if row != 0 and column != 0 and row != settings.ROWS - 1 and column != settings.COLUMNS - 1:
+                            grid[column][row].cave_generate()
+                for row in range(settings.ROWS):
+                    for column in range(settings.COLUMNS):
+                        if row != 0 and column != 0 and row != settings.ROWS - 1 and column != settings.COLUMNS - 1:
+                            grid[column][row].update()
+
+            # press return to use the 'game of life' rules to generate
+            if event.key == pygame.K_RETURN:
+                    for row in range(settings.ROWS):
+                        for column in range(settings.COLUMNS):
+                            if row != 0 and column != 0 and row != settings.ROWS - 1 and column != settings.COLUMNS - 1:
+                                grid[column][row].game_of_life_generate()
+                    for row in range(settings.ROWS):
+                        for column in range(settings.COLUMNS):
+                            if row != 0 and column != 0 and row != settings.ROWS - 1 and column != settings.COLUMNS - 1:
+                                grid[column][row].update()
+
 
     # DRAW STUFF
-    for i in range(ROWS * COLUMNS):
-        if gridList[i].state:
-            pygame.draw.rect(window, (250, 250, 250), gridList[i].rect, 0)
-        else:
-            pygame.draw.rect(window, (50, 50, 50), gridList[i].rect, 0)
+    for row in range(settings.ROWS):
+        for column in range(settings.COLUMNS):
+            if grid[row][column].state is True:
+                pygame.draw.rect(window, settings.WHITE, grid[row][column].rect, 0)
+            else:
+                pygame.draw.rect(window, settings.GRAY, grid[row][column].rect, 0)
 
     # DISPLAY FRAME
     pygame.display.update()
