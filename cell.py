@@ -1,58 +1,128 @@
 import pygame
-
 import settings
+from random import randint
 
 
 class Cell:
-    def __init__(self, row, column, state):
-        self.row = row
+    def __init__(self, column, row, state):
         self.column = column
-
-        self.temp_state = False
-
-        if state < 45:
+        self.row = row
+        self.neighborhood = []
+        self.rect = pygame.Rect(self.column * settings.TILESIZE, self.row * settings.TILESIZE,
+                                settings.TILESIZE, settings.TILESIZE)
+        '''
+        Below are your initial settings for using the cave generating algorithm
+        ~55% start off Alive, ~45% Dead
+        All cells on the outer edges of map are Dead
+        '''
+        if self.row == 0 or self.column == 0 or self.row == settings.ROWS - 1 or self.column == settings.COLUMNS - 1:
             self.state = False
-        elif self.row == 0 or self.column == 0 or self.row == settings.ROWS - 1 or self.column == settings.COLUMNS - 1:
+        elif state < 45:
             self.state = False
         else:
             self.state = True
-
-        self.rect = pygame.Rect(self.column * settings.TILESIZE, self.row * settings.TILESIZE,
-                                settings.TILESIZE, settings.TILESIZE)
+        self.temp_state = self.state
 
     def set_neighborhood(self, grid):
-        self.top_left = grid[self.column - 1][self.row - 1]
-        self.top = grid[self.column][self.row -1]
-        self.top_right = grid[self.column + 1][self.row - 1]
-        self.left = grid[self.column - 1][self.row]
-        self.right = grid[self.column + 1][self.row]
-        self.bottom_left = grid[self.column - 1][self.row + 1]
-        self.bottom = grid[self.column][self.row + 1]
-        self.bottom_right = grid[self.column + 1][self.row + 1]
+        self.neighborhood.append(grid.get_cell(self.column - 1, self.row - 1))
+        self.neighborhood.append(grid.get_cell(self.column, self.row - 1))
+        self.neighborhood.append(grid.get_cell(self.column + 1, self.row - 1))
+        self.neighborhood.append(grid.get_cell(self.column - 1, self.row))
+        self.neighborhood.append(grid.get_cell(self.column + 1, self.row))
+        self.neighborhood.append(grid.get_cell(self.column - 1, self.row + 1))
+        self.neighborhood.append(grid.get_cell(self.column, self.row + 1))
+        self.neighborhood.append(grid.get_cell(self.column + 1, self.row + 1))
 
     def check_neighborhood(self):
-        living_cells = self.state + self.top_left.state + self.top.state + self.top_right.state + self.left.state \
-                       + self.right.state + self.bottom_left.state + self.bottom.state + self.bottom_right.state
+        living_cells = 0
+        for i in range(len(self.neighborhood)):
+            living_cells += self.neighborhood[i].state
         return living_cells
 
+
+class Map:
+    def __init__(self):
+        self.grid = self.set_grid()
+        self.create_neighborhoods()
+
+    def set_grid(self):
+        grid = [
+                   [Cell(column, row, randint(0, 100)) for row in range(settings.ROWS)]
+                   for column in range(settings.COLUMNS)
+               ]
+        '''
+        for column in range(settings.COLUMNS):
+            grid.append([])
+            for row in range(settings.ROWS):
+                grid[column].append(Cell(column, row, randint(0, 100)))
+        '''
+        return grid
+
+    def get_cell(self, column, row):
+        try:
+            return self.grid[column][row]
+        except LookupError:
+            return Cell(settings.COLUMNS + 1, settings.ROWS + 1, False)
+
+    def create_neighborhoods(self):
+        for row in range(settings.ROWS):
+            for column in range(settings.COLUMNS):
+                cell = self.get_cell(column, row)
+                cell.set_neighborhood(self)
+
     def cave_generate(self):
-        if self.check_neighborhood() >= 5:
-            self.temp_state = True
-        else:
-            self.temp_state = False
+        for row in range(settings.ROWS):
+            for column in range(settings.COLUMNS):
+                cell = self.get_cell(column, row)
+                if cell.state + cell.check_neighborhood() >= 5:
+                    cell.temp_state = True
+                else:
+                    cell.temp_state = False
+
+    # this function removes the common 4x4 pillar with corners missing after one pass
+    def remove_pillars(self):
+        '''
+        check the top left cell.state to be True, if yes, then check the remaining 4x4 group of
+        cells to see if it matches the pillar pattern
+        if yes, change all cell.state to True within the 4x4 group
+        '''
+        for row in range(settings.ROWS):
+            for column in range(settings.COLUMNS):
+                if self.grid[column][row].state is True:
+                    pass
+
 
     def game_of_life_generate(self):
-        if self.state is True:
-            if self.check_neighborhood() < 3:
-                self.temp_state = False
-            elif self.check_neighborhood() == 3 or self.check_neighborhood() == 4:
-                self.temp_state = True
-            elif self.check_neighborhood() > 4:
-                self.temp_state = False
-        elif self.state is False and self.check_neighborhood() == 3:
-            self.temp_state = True
+        for row in range(settings.ROWS):
+            for column in range(settings.COLUMNS):
+                cell = self.get_cell(column, row)
+                if cell.state is True:
+                    if cell.check_neighborhood() < 2:
+                        cell.temp_state = False
+                    elif cell.check_neighborhood() == 2 or cell.check_neighborhood() == 3:
+                        cell.temp_state = True
+                    elif cell.check_neighborhood() > 3:
+                        cell.temp_state = False
+                elif cell.state is False and cell.check_neighborhood() == 3:
+                    cell.temp_state = True
 
     def update(self):
-        self.state = self.temp_state
+        for row in range(settings.ROWS):
+            for column in range(settings.COLUMNS):
+                cell = self.get_cell(column, row)
+                cell.state = cell.temp_state
+
+    def reset(self):
+        self.grid = self.set_grid()
+        self.create_neighborhoods()
+
+    def draw(self, screen):
+        for row in range(settings.ROWS):
+            for column in range(settings.COLUMNS):
+                cell = self.get_cell(column, row)
+                if cell.state is True:
+                    pygame.draw.rect(screen, settings.LIGHT_BLUE, cell.rect, 0)
+                else:
+                    pygame.draw.rect(screen, settings.BLUE, cell.rect, 0)
 
 
