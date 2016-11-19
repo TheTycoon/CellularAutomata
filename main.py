@@ -41,7 +41,6 @@ while running:
                 map.reset()
                 map.update()
 
-
     # DRAW STUFF
     map.draw(window)
 

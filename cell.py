@@ -70,6 +70,49 @@ class Map:
                 cell = self.get_cell(column, row)
                 cell.set_neighborhood(self)
 
+    '''
+    # this function removes the common 4x4 pillar with corners missing after one pass
+    def remove_pillars(self):
+        for row in range(settings.ROWS):
+            for column in range(settings.COLUMNS):
+                if self.check_pillar(column, row) is True:
+                    rows = []
+                    for i in range(4):
+                        temp_row = [
+                            self.get_cell(column, row + i), self.get_cell(column + 1, row + i),
+                            self.get_cell(column + 2, row + i), self.get_cell(column + 3, row + i)
+                        ]
+                        rows.append(temp_row)
+
+                    for test_row in rows:
+                        for cell in test_row:
+                            cell.temp_state = True
+        self.update()
+
+    def check_pillar(self, column, row):
+        rows = []
+        for i in range(4):
+            temp_row = [
+                self.get_cell(column, row + i), self.get_cell(column + 1, row + i), self.get_cell(column + 2, row + i),
+                self.get_cell(column + 3, row + i)
+            ]
+            rows.append(temp_row)                #### ?????
+
+        for cell in rows[1]:
+            if cell.state is True:
+                return False
+        for cell in rows[2]:
+            if cell.state is True:
+                return False
+
+        if not (rows[0][0].state is True and rows[0][1].state is False and rows[0][2].state is False and rows[0][3].state is True):
+            return False
+        elif not (rows[3][0].state is True and rows[3][1].state is False and rows[3][2].state is False and rows[3][3].state is True):
+            return False
+        else:
+            return True
+    '''
+
     def cave_generate(self):
         for row in range(settings.ROWS):
             for column in range(settings.COLUMNS):
@@ -78,19 +121,6 @@ class Map:
                     cell.temp_state = True
                 else:
                     cell.temp_state = False
-
-    # this function removes the common 4x4 pillar with corners missing after one pass
-    def remove_pillars(self):
-        '''
-        check the top left cell.state to be True, if yes, then check the remaining 4x4 group of
-        cells to see if it matches the pillar pattern
-        if yes, change all cell.state to True within the 4x4 group
-        '''
-        for row in range(settings.ROWS):
-            for column in range(settings.COLUMNS):
-                if self.grid[column][row].state is True:
-                    pass
-
 
     def game_of_life_generate(self):
         for row in range(settings.ROWS):
@@ -121,8 +151,8 @@ class Map:
             for column in range(settings.COLUMNS):
                 cell = self.get_cell(column, row)
                 if cell.state is True:
-                    pygame.draw.rect(screen, settings.LIGHT_BLUE, cell.rect, 0)
+                    pygame.draw.rect(screen, settings.WHITE, cell.rect, 0)
                 else:
-                    pygame.draw.rect(screen, settings.BLUE, cell.rect, 0)
+                    pygame.draw.rect(screen, settings.BLACK, cell.rect, 0)
 
 
